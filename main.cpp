@@ -14,8 +14,10 @@
 #include "Camera.h"
 #include "Texture.h"
 //#include "stb_image.h"
-#include "Light.h"
+#include "DirectionalLight.h"
 #include "Material.h"
+#include "CommonValue.h"
+#include "PointLight.h"
 
 const int Width = 1920, Height = 1200;
 
@@ -23,7 +25,8 @@ Window mainWindow;
 Camera camera;
 Texture brickTexture;
 Texture dirtTexture;
-Light light;
+DirectionalLight light;
+PointLight pointLights[MAX_POINT_LIGHTS];
 
 const float toRadians = 3.14 / 180;
 
@@ -58,40 +61,75 @@ static const char* vShader = "                   \n\
 ";
 
 static const char* fShader = "                        \n\
-			#version 330                         \n\
-            out vec4 colour;                     \n\
-	        in vec2 TexCoord;                    \n\
-            in vec4 vColour;                      \n\
-	        in vec3 Normal ;                       \n\
-            in vec3 FragPos;                        \n\
-	        struct DirectionalLight {             \n\
-                   vec3 col; float ambientIntensity; vec3 direction ; float diffuseIntensity;\n\
-            };                                      \n\
-            struct Material{                        \n\
-            	float specularIntensity;             \n\
-                float shininess;                      \n\
-			 };                                       \n\
-			 uniform sampler2D theTexture;            \n\
-			 uniform DirectionalLight dLight;  \n\
-			 uniform Material material;         \n\
-             uniform vec3 eyePosition;           \n\
-	          void main(){ \n\
-	             vec4 ambientColour = vec4(dLight.col, 1.0f) * dLight.ambientIntensity;  \n\
-                 float diffuseFactor = max(dot(normalize(Normal), normalize(dLight.direction)) , 0.0f);\n\
-                 vec4 specularColour = vec4(0 , 0 , 0 , 0);\n\
-	             if (diffuseFactor > 0.0f) {\n\
-					 vec3 fragToEye = normalize(eyePosition - FragPos); \n\
-					 vec3 reflectedVertex = normalize(reflect(dLight.direction, normalize(Normal))); \n\
-                     float specularFactor = dot(fragToEye , reflectedVertex);\n\
-					if(specularFactor > 0.0f){\n\
-								specularFactor = pow(specularFactor, material.shininess);\n\
-                                specularColour = vec4(dLight.col * material.specularIntensity * specularFactor , 1.0f);}\n\
-	              }\n\
-	             vec4 diffuseColour = vec4(dLight.col, 1.0f) * dLight.diffuseIntensity * diffuseFactor;\n\
-	             colour = texture(theTexture , TexCoord) * (ambientColour + diffuseColour + specularColour) ;               \n\
-	              \n\
-            }                                        \n\
+    #version 330                         \n\
+    out vec4 colour;                     \n\
+    in vec2 TexCoord;                    \n\
+    in vec4 vColour;                      \n\
+    in vec3 Normal;                       \n\
+    in vec3 FragPos;                     \n\
+    const int MAX_POINT_LIGHTS = 3;     \n\
+    struct Light {                       \n\
+        vec3 col; float ambientIntensity; float diffuseIntensity; \n\
+    }; \n\
+    struct DirectionalLight { \n\
+        Light base; \n\
+        vec3 direction; \n\
+    }; \n\
+    struct PointLight { \n\
+        Light base; \n\
+        vec3 position;\n\
+        float constant;\n\
+        float linear;\n\
+        float exponent;\n\
+    }; \n\
+    struct Material{                    \n\
+        float specularIntensity;        \n\
+        float shininess;                \n\
+    };                                 \n\
+    uniform sampler2D theTexture;       \n\
+    uniform int pointLightCount;        \n\
+    uniform DirectionalLight dLight;    \n\
+    uniform PointLight pointLights[MAX_POINT_LIGHTS]; \n\
+    uniform Material material;          \n\
+    uniform vec3 eyePosition;           \n\
+    vec4 CalcLightByDirection(Light light, vec3 direction) {\n\
+        vec4 ambientColour = vec4(light.col, 1.0f) * light.ambientIntensity; \n\
+        float diffuseFactor = max(dot(normalize(Normal), normalize(direction)), 0.0f); \n\
+        vec4 specularColour = vec4(0, 0, 0, 0); \n\
+        if (diffuseFactor > 0.0f) { \n\
+            vec3 fragToEye = normalize(eyePosition - FragPos); \n\
+            vec3 reflectedVertex = normalize(reflect(direction, normalize(Normal))); \n\
+            float specularFactor = dot(fragToEye, reflectedVertex); \n\
+            if (specularFactor > 0.0f) {\n\
+                specularFactor = pow(specularFactor, material.shininess); \n\
+                specularColour = vec4(light.col * material.specularIntensity * specularFactor, 1.0f);\n\
+            }\n\
+        }\n\
+        vec4 diffuseColour = vec4(light.col, 1.0f) * light.diffuseIntensity * diffuseFactor; \n\
+        return (ambientColour + diffuseColour + specularColour);\n\
+    }\n\
+    vec4 CalcDirectionalLight() {\n\
+        return CalcLightByDirection(dLight.base, dLight.direction);\n\
+    }\n\
+    vec4 CalcPointLights() {\n\
+        vec4 totalColour = vec4(0, 0, 0, 0);\n\
+        for (int i = 0; i < pointLightCount; i++) {\n\
+            vec3 direction = FragPos - pointLights[i].position;\n\
+            float distance = length(direction);\n\
+            direction = normalize(direction);\n\
+            vec4 colour = CalcLightByDirection(pointLights[i].base, direction);\n\
+            float attenuation = 1.0 / (pointLights[i].constant + pointLights[i].linear * distance + pointLights[i].exponent * distance * distance);\n\
+            totalColour += (colour * attenuation);\n\
+        }\n\
+        return totalColour;\n\
+    }\n\
+    void main() {\n\
+        vec4 finalColour = CalcDirectionalLight();\n\
+        finalColour += CalcPointLights();\n\
+        colour = texture(theTexture, TexCoord) * finalColour;\n\
+    }\n\
 ";
+
 
 void calcAverageNormals(unsigned int* indices, unsigned int indiceCount, GLfloat*  vertices, unsigned int verticeCount, unsigned int vLength, unsigned int normalOffset) {
 	for (size_t i = 0; i < indiceCount; i += 3) {
@@ -145,6 +183,20 @@ static void createTriangle() {
 		-1.1f , -1.1f , 0.0f ,   0.5f , 1.0f ,     0.0f , 0.0f , 0.0f 
 	};
 
+	unsigned int floorIndices[] = {
+		0 , 2 , 1 ,
+		1 , 2 , 3 
+	};
+
+	GLfloat floorVertices[] = {
+	//   x         y        z
+		-10.0f , 0.0f , -10.0f , 0.0f , 0.0f ,  0.0f , -1.0f , 0.0f ,
+		10.0f , 0.0f , -10.0f ,  10.0f , 0.0f , 0.0f , -1.0f , 0.0f ,
+		-10.0f , 0.0f , 10.0f ,  0.0f , 10.0f , 0.0f , -1.0f , 0.0f ,
+		10.0f , 0.0f , 10.0f  ,  10.0f , 10.0f , 0.0f , -1.0f , 0.0f 
+	};
+
+
 	calcAverageNormals(indices, 12, vertices, 32, 8, 5);
 
 	Mesh* obj1 = new Mesh();
@@ -154,6 +206,10 @@ static void createTriangle() {
 	Mesh* obj2 = new Mesh();
 	obj2->createMesh(vertices, indices, 32, 12);
 	meshList.push_back(obj2);
+
+	Mesh* obj3 = new Mesh();
+	obj3->createMesh(floorVertices, floorIndices, 32, 6);
+	meshList.push_back(obj3);
 
 }
 
@@ -183,15 +239,23 @@ int main()
 	shinyMaterial = Material(1.0f, 32);
 	dullMaterial = Material(0.3f, 4);
 
-	light = Light(1.0f , 1.0f , 1.0f , 0.5f , 1.0f , 1.0f , 2.0f , 0.3f);
+	light = DirectionalLight(1.0f , 1.0f , 1.0f , 0.5f, 0.3f , 1.0f , 1.0f , 2.0f );
+
+	unsigned int pointLightCount = 0;
+	pointLights[0] = PointLight(0.0f, 1.0f, 0.0f, 0.6f, 0.1f, -4.0f, 0.0f, 0.0f, 0.3f, 0.2f, 0.1f);
+	pointLightCount++;
+
+	pointLights[1] = PointLight(0.0f, 0.0f, 1.0f, 0.2f, 0.5f, 4.0f, 0.0f, 0.0f, 0.3f, 0.2f, 0.1f);
+	pointLightCount++;
+
+	pointLights[2] = PointLight(1.0f, 0.0f, 0.0f, 0.8f, 0.9f, 0.0f, 0.0f, 4.0f, 0.3f, 0.2f, 0.1f);
+	pointLightCount++;
+
+
 
 	GLuint uniformProjection = 0;
 	GLuint uniformModel = 0;
 	GLuint uniformView = 0;
-	GLuint uniformAmbientColour = 0;
-	GLuint uniformAbientIntensity = 0;
-	GLuint uniformDirection = 0;
-	GLuint uniformDiffusedLight = 0;
 	GLuint uniformEyePosition = 0;
 	GLuint uniformSpecularIntensity = 0;
 	GLuint uniformShininess = 0;
@@ -218,15 +282,13 @@ int main()
 		uniformModel = shaderList[0]->getModelLocation();
 		uniformProjection = shaderList[0]->getProjectionLoaction();
 		uniformView = shaderList[0]->getViewLocation();
-		uniformAmbientColour = shaderList[0]->getAmbientColour();
-		uniformAbientIntensity = shaderList[0]->getAmbientIntensity();
-		uniformDirection = shaderList[0]->getDirectionLocation();
-		uniformDiffusedLight = shaderList[0]->getDiffuseIntensity();
 		uniformEyePosition = shaderList[0]->getUniformEyePosition();
 		uniformSpecularIntensity = shaderList[0]->getSpecularIntensityLocation();
 		uniformShininess = shaderList[0]->getShininessLocation();
 
-		light.useLight(uniformAbientIntensity, uniformAmbientColour , uniformDiffusedLight , uniformDirection);
+		//light.useLight(uniformAbientIntensity, uniformAmbientColour , uniformDiffusedLight , uniformDirection);
+		shaderList[0]->setDirectionalLight(&light);
+		shaderList[0]->SetPointLights(pointLights, pointLightCount);
 
 		glm::mat4 model(1.0f);
 
@@ -257,6 +319,13 @@ int main()
 		dullMaterial.useMaterial(uniformSpecularIntensity, uniformShininess);
 
 		meshList[1]->renderMesh();
+
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(0.0f , -2.0f , 0.0f));
+		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
+		dirtTexture.UseTexture();
+		dullMaterial.useMaterial(uniformSpecularIntensity, uniformShininess);
+		meshList[2]->renderMesh();
 
 		mainWindow.swapBuffers();
 
