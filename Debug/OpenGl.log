@@ -1,4 +1,10 @@
-﻿  main.cpp
-C:\Users\tyagiy\source\repos\OpenGl\OpenGl\main.cpp(31,30): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\tyagiy\source\repos\OpenGl\OpenGl\main.cpp(266,15): warning C4244: 'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+﻿  Camera.cpp
+  Shader.cpp
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Shader.cpp(46,179): warning C4244: 'argument': conversion from 'GLuint' to 'GLfloat', possible loss of data
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Shader.cpp(46,130): warning C4244: 'argument': conversion from 'GLuint' to 'GLfloat', possible loss of data
+  SpotLight.cpp
+  main.cpp
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\main.cpp(33,30): warning C4305: 'initializing': truncation from 'double' to 'float'
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\main.cpp(303,15): warning C4244: 'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+  Generating Code...
   OpenGl.vcxproj -> C:\Users\tyagiy\source\repos\OpenGl\Debug\OpenGl.exe

@@ -18,6 +18,7 @@
 #include "Material.h"
 #include "CommonValue.h"
 #include "PointLight.h"
+#include "SpotLight.h"
 
 const int Width = 1920, Height = 1200;
 
@@ -27,6 +28,7 @@ Texture brickTexture;
 Texture dirtTexture;
 DirectionalLight light;
 PointLight pointLights[MAX_POINT_LIGHTS];
+SpotLight spotLights[MAX_SPOT_LIGHTS];
 
 const float toRadians = 3.14 / 180;
 
@@ -67,7 +69,8 @@ static const char* fShader = "                        \n\
     in vec4 vColour;                      \n\
     in vec3 Normal;                       \n\
     in vec3 FragPos;                     \n\
-    const int MAX_POINT_LIGHTS = 3;     \n\
+    const int MAX_POINT_LIGHTS = 3;   \n\
+    const int MAX_SPOT_LIGHTS = 3; \n\
     struct Light {                       \n\
         vec3 col; float ambientIntensity; float diffuseIntensity; \n\
     }; \n\
@@ -81,17 +84,24 @@ static const char* fShader = "                        \n\
         float constant;\n\
         float linear;\n\
         float exponent;\n\
-    }; \n\
+    };\n\
+	struct SpotLight{\n\
+		PointLight base;\n\
+		vec3 direction;\n\
+		float edge;\n\
+	}; \n\
     struct Material{                    \n\
         float specularIntensity;        \n\
         float shininess;                \n\
     };                                 \n\
     uniform sampler2D theTexture;       \n\
-    uniform int pointLightCount;        \n\
+    uniform int pointLightCount; \n\
+    uniform int spotLightCount; \n\
     uniform DirectionalLight dLight;    \n\
     uniform PointLight pointLights[MAX_POINT_LIGHTS]; \n\
+	uniform SpotLight spotLights[MAX_SPOT_LIGHTS]; \n\
     uniform Material material;          \n\
-    uniform vec3 eyePosition;           \n\
+    uniform vec3 eyePosition;\n\
     vec4 CalcLightByDirection(Light light, vec3 direction) {\n\
         vec4 ambientColour = vec4(light.col, 1.0f) * light.ambientIntensity; \n\
         float diffuseFactor = max(dot(normalize(Normal), normalize(direction)), 0.0f); \n\
@@ -108,24 +118,46 @@ static const char* fShader = "                        \n\
         vec4 diffuseColour = vec4(light.col, 1.0f) * light.diffuseIntensity * diffuseFactor; \n\
         return (ambientColour + diffuseColour + specularColour);\n\
     }\n\
+	vec4 CalcPointLight(PointLight pLight) {\n\
+			vec3 direction = FragPos - pLight.position; \n\
+			float distance = length(direction); \n\
+			direction = normalize(direction); \n\
+			vec4 colour = CalcLightByDirection(pLight.base, direction); \n\
+			float attenuation = 1.0 / (pLight.constant + pLight.linear * distance + pLight.exponent * distance * distance); \n\
+			return (colour / attenuation); \n\
+	}\n\
     vec4 CalcDirectionalLight() {\n\
         return CalcLightByDirection(dLight.base, dLight.direction);\n\
     }\n\
     vec4 CalcPointLights() {\n\
         vec4 totalColour = vec4(0, 0, 0, 0);\n\
         for (int i = 0; i < pointLightCount; i++) {\n\
-            vec3 direction = FragPos - pointLights[i].position;\n\
-            float distance = length(direction);\n\
-            direction = normalize(direction);\n\
-            vec4 colour = CalcLightByDirection(pointLights[i].base, direction);\n\
-            float attenuation = 1.0 / (pointLights[i].constant + pointLights[i].linear * distance + pointLights[i].exponent * distance * distance);\n\
-            totalColour += (colour * attenuation);\n\
+			totalColour += CalcPointLight(pointLights[i]);\n\
         }\n\
         return totalColour;\n\
     }\n\
-    void main() {\n\
-        vec4 finalColour = CalcDirectionalLight();\n\
-        finalColour += CalcPointLights();\n\
+	vec4 CalcSpotLight(SpotLight sLight){\n\
+		vec3 rayDirection = normalize(FragPos - sLight.base.position);\n\
+		float slFactor = dot(rayDirection, sLight.direction);\n\
+		if (slFactor > sLight.edge) {\n\
+			vec4 colour = CalcPointLight(sLight.base);\n\
+			return colour *(1.0f - (1.0f - slFactor) * (1.0f / (1.0f - sLight.edge)));\n\
+		}\n\
+		else {\n\
+			return vec4(0, 0, 0, 0);\n\
+		}\n\
+	}\n\
+	vec4 CalcSpotLights(){\n\
+		vec4 totalColour = vec4(0, 0, 0, 0);\n\
+		for (int i = 0; i < spotLightCount; i++) {\n\
+			totalColour += CalcSpotLight(spotLights[i]);\n\
+		}\n\
+		return totalColour;\n\
+	}\n\
+	void main() {\n\
+			vec4 finalColour = CalcDirectionalLight(); \n\
+			finalColour += CalcPointLights(); \n\
+			finalColour += CalcSpotLights();\n\
         colour = texture(theTexture, TexCoord) * finalColour;\n\
     }\n\
 ";
@@ -239,19 +271,24 @@ int main()
 	shinyMaterial = Material(1.0f, 32);
 	dullMaterial = Material(0.3f, 4);
 
-	light = DirectionalLight(1.0f , 1.0f , 1.0f , 0.5f, 0.3f , 1.0f , 1.0f , 2.0f );
+	light = DirectionalLight(1.0f , 1.0f , 1.0f , 0.3f, 0.2f , 1.0f , 1.0f , 2.0f );
 
 	unsigned int pointLightCount = 0;
-	pointLights[0] = PointLight(0.0f, 1.0f, 0.0f, 0.6f, 0.1f, -4.0f, 0.0f, 0.0f, 0.3f, 0.2f, 0.1f);
-	pointLightCount++;
+	//pointLights[0] = PointLight(0.0f, 1.0f, 0.0f, 0.6f, 0.1f, -4.0f, 0.0f, 0.0f, 0.3f, 0.2f, 0.1f);
+	//pointLightCount++;
 
-	pointLights[1] = PointLight(0.0f, 0.0f, 1.0f, 0.2f, 0.5f, 4.0f, 0.0f, 0.0f, 0.3f, 0.2f, 0.1f);
-	pointLightCount++;
+	//pointLights[1] = PointLight(0.0f, 0.0f, 1.0f, 0.2f, 0.5f, 4.0f, 0.0f, 0.0f, 0.3f, 0.2f, 0.1f);
+	//pointLightCount++;
 
-	pointLights[2] = PointLight(1.0f, 0.0f, 0.0f, 0.8f, 0.9f, 0.0f, 0.0f, 4.0f, 0.3f, 0.2f, 0.1f);
-	pointLightCount++;
+	//pointLights[2] = PointLight(1.0f, 0.0f, 0.0f, 0.8f, 0.9f, 0.0f, 0.0f, 4.0f, 0.3f, 0.2f, 0.1f);
+	//pointLightCount++;
 
+	unsigned int spotLightCount = 0;
+	spotLights[0] = SpotLight(1.0f, 1.0f, 1.0f, 0.6f, 0.1f, -4.0f, 0.0f, 0.0f, 0.0f , -1.0f , 0.0f ,  1.0f, 0.0f, 0.0f , 20.0f);
+	spotLightCount++;
 
+	spotLights[1] = SpotLight(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.5f, 0.0f, -5.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f);
+	spotLightCount++;
 
 	GLuint uniformProjection = 0;
 	GLuint uniformModel = 0;
@@ -287,8 +324,12 @@ int main()
 		uniformShininess = shaderList[0]->getShininessLocation();
 
 		//light.useLight(uniformAbientIntensity, uniformAmbientColour , uniformDiffusedLight , uniformDirection);
+		glm::vec3 lowerLight = camera.getCameraPosition();
+		lowerLight.y -= 0.3f;
+		spotLights[0].SetFlash(lowerLight, camera.getCameraDirection());
 		shaderList[0]->setDirectionalLight(&light);
 		shaderList[0]->SetPointLights(pointLights, pointLightCount);
+		shaderList[0]->SetSpotLights(spotLights, spotLightCount);
 
 		glm::mat4 model(1.0f);
 
