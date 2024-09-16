@@ -20,6 +20,8 @@
 #include "PointLight.h"
 #include "SpotLight.h"
 
+#include <assimp/Importer.hpp>
+
 const int Width = 1920, Height = 1200;
 
 Window mainWindow;
@@ -289,6 +291,8 @@ int main()
 
 	spotLights[1] = SpotLight(1.0f, 1.0f, 1.0f, 0.0f, 1.0f, 0.0f, 1.5f, 0.0f, -5.0f, -1.0f, 0.0f, 1.0f, 0.0f, 0.0f, 20.0f);
 	spotLightCount++;
+
+	Assimp::Importer* imp = new Assimp::Importer();
 
 	GLuint uniformProjection = 0;
 	GLuint uniformModel = 0;

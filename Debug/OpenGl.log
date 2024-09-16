@@ -1,10 +1,24 @@
 ﻿  Camera.cpp
+  DirectionalLight.cpp
+  Light.cpp
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\DirectionalLight.cpp(14,14): warning C4244: 'argument': conversion from 'GLfloat' to 'GLint', possible loss of data
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\DirectionalLight.cpp(15,14): warning C4244: 'argument': conversion from 'GLfloat' to 'GLint', possible loss of data
+  main.cpp
+C:\Users\tyagiy\Downloads\assimp-5.4.3\assimp-5.4.3\include\assimp\defs.h(55,10): error C1083: Cannot open include file: 'assimp/config.h': No such file or directory
+  Material.cpp
+  Mesh.cpp
+  PointLight.cpp
   Shader.cpp
 C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Shader.cpp(46,179): warning C4244: 'argument': conversion from 'GLuint' to 'GLfloat', possible loss of data
 C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Shader.cpp(46,130): warning C4244: 'argument': conversion from 'GLuint' to 'GLfloat', possible loss of data
   SpotLight.cpp
-  main.cpp
-C:\Users\tyagiy\source\repos\OpenGl\OpenGl\main.cpp(33,30): warning C4305: 'initializing': truncation from 'double' to 'float'
-C:\Users\tyagiy\source\repos\OpenGl\OpenGl\main.cpp(303,15): warning C4244: 'initializing': conversion from 'double' to 'GLfloat', possible loss of data
+  Texture.cpp
+  Window.cpp
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Window.cpp(112,22): warning C4244: '=': conversion from 'double' to 'GLfloat', possible loss of data
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Window.cpp(113,22): warning C4244: '=': conversion from 'double' to 'GLfloat', possible loss of data
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Window.cpp(117,28): warning C4244: '=': conversion from 'double' to 'GLfloat', possible loss of data
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Window.cpp(118,40): warning C4244: '=': conversion from 'double' to 'GLfloat', possible loss of data
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Window.cpp(120,21): warning C4244: '=': conversion from 'double' to 'GLfloat', possible loss of data
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Window.cpp(121,21): warning C4244: '=': conversion from 'double' to 'GLfloat', possible loss of data
   Generating Code...
-  OpenGl.vcxproj -> C:\Users\tyagiy\source\repos\OpenGl\Debug\OpenGl.exe
+C:\Users\tyagiy\source\repos\OpenGl\OpenGl\Window.cpp(72,1): warning C4715: 'Window::initialise': not all control paths return a value
