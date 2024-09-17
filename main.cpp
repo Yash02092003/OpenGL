@@ -20,6 +20,7 @@
 #include "PointLight.h"
 #include "SpotLight.h"
 
+#include "Model.h"
 #include <assimp/Importer.hpp>
 
 const int Width = 1920, Height = 1200;
@@ -42,6 +43,9 @@ GLfloat lastTIme = 0.0f;
 
 Material shinyMaterial;
 Material dullMaterial;
+
+Model xwing;
+Model blackhawk;
 
 static const char* vShader = "                   \n\
              #version 330                        \n\
@@ -265,13 +269,17 @@ int main()
 	camera = Camera(glm::vec3(0.0f, 0.0f, 0.0f), glm::vec3(0.0f, 1.0f, 0.0f), -90.0f, 0.0f, 5.0f, 0.5f);
 
 	brickTexture = Texture("Textures/brick.png");
-	brickTexture.LoadTexture();
+	brickTexture.LoadTextureA();
 
 	dirtTexture = Texture("Textures/dirt.png");
-	dirtTexture.LoadTexture();
+	dirtTexture.LoadTextureA();
 
 	shinyMaterial = Material(1.0f, 32);
 	dullMaterial = Material(0.3f, 4);
+
+	xwing = Model();
+	xwing.LoadModel("Models/star wars x-wing.obj");
+
 
 	light = DirectionalLight(1.0f , 1.0f , 1.0f , 0.3f, 0.2f , 1.0f , 1.0f , 2.0f );
 
@@ -300,6 +308,7 @@ int main()
 	GLuint uniformEyePosition = 0;
 	GLuint uniformSpecularIntensity = 0;
 	GLuint uniformShininess = 0;
+
 	glm::mat4 projection = glm::perspective(45.0f , (GLfloat)mainWindow.getBufferWidth() / (GLfloat) mainWindow.getBufferHeight(), 0.1f, 100.0f);
 	
 	while (!mainWindow.getShouldWindowClose()) {
@@ -351,7 +360,7 @@ int main()
 		brickTexture.UseTexture();
 		shinyMaterial.useMaterial(uniformSpecularIntensity, uniformShininess);
 
-		meshList[0]->renderMesh();
+		//meshList[0]->renderMesh();
 
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(2.0f , 0.0f, 1.5f));
@@ -368,9 +377,13 @@ int main()
 		model = glm::mat4(1.0f);
 		model = glm::translate(model, glm::vec3(0.0f , -2.0f , 0.0f));
 		glUniformMatrix4fv(uniformModel, 1, GL_FALSE, glm::value_ptr(model));
-		dirtTexture.UseTexture();
 		dullMaterial.useMaterial(uniformSpecularIntensity, uniformShininess);
 		meshList[2]->renderMesh();
+
+		model = glm::mat4(1.0f);
+		model = glm::scale(model, glm::vec3(0.5f, 0.5f, 0.5f));
+		glUniformMatrix4fv(uniformModel,1 , GL_FALSE , glm::value_ptr(model));
+		xwing.RenderModel();
 
 		mainWindow.swapBuffers();
 
